@@ -1,93 +1,95 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hamid SMM Panel</title>
 <style>
-*{box-sizing:border-box}
-body{margin:0;background:#080d1b;color:white;font-family:Arial}
-header{background:#111a30;padding:20px;text-align:center}
-header h2{color:#00e5ff}
-.hero{text-align:center;padding:35px 15px;background:linear-gradient(135deg,#10264c,#30105a)}
-button{background:#00d9ff;border:0;padding:12px 20px;border-radius:7px;font-weight:bold;cursor:pointer}
-input{width:100%;padding:13px;margin:9px 0;border-radius:7px;border:0}
-.panel{background:#17223b;padding:20px;border-radius:12px;margin:20px auto;max-width:400px}
-.hidden{display:none}
-.services{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:15px}
-.card{background:#17223b;padding:18px;text-align:center;border-radius:10px}
-.price{color:#00ff9d}
+body{margin:0;background:#0b1020;color:white;font-family:Arial}
+header{text-align:center;background:#171f3b;padding:20px}
+h1{color:#8da8ff}
+.container{max-width:600px;margin:auto;padding:15px}
+.card{background:#171f3b;padding:18px;border-radius:14px;margin:15px 0}
+input{width:100%;padding:13px;margin:8px 0;box-sizing:border-box;border:0;border-radius:7px}
+button{background:#536dfe;color:white;border:0;padding:12px;border-radius:7px;margin:5px}
+.upi{background:#26365f;padding:12px;word-break:break-all}
+.small{color:#b9c3df;font-size:13px}
 </style>
 </head>
 <body>
-
 <header>
-<h2>🔥 HAMID SMM PANEL</h2>
-<p>Welcome to our SMM Panel</p>
+<h1>HAMID SMM PANEL</h1>
+<p>Grow Your Social Media 🚀</p>
 </header>
+<div class="container">
 
-<div class="hero">
-<h1>Grow Your Social Media</h1>
-<p>Choose your favourite services</p>
-<button onclick="show('login')">Login</button>
-<button onclick="show('register')">Register</button>
+<div class="card">
+<h2>My Wallet</h2>
+<h1>₹0.00</h1>
+<p class="small">Demo Balance</p>
 </div>
 
-<div id="login" class="panel">
-<h2>Customer Login</h2>
-<input id="loginEmail" type="email" placeholder="Email">
-<input id="loginPass" type="password" placeholder="Password">
-<button onclick="login()">Login</button>
-<p id="loginMsg"></p>
+<div class="card">
+<h2>Add Funds</h2>
+<button onclick="amount(100)">₹100</button>
+<button onclick="amount(200)">₹200</button>
+<button onclick="amount(500)">₹500</button>
+<input id="money" type="number" placeholder="Enter Amount">
+<h3>Pay using UPI</h3>
+<div class="upi">9821364716-n119@ybl</div>
+<button onclick="copyUPI()">Copy UPI ID</button>
+<input id="utr" placeholder="Enter UTR / Transaction ID">
+<button onclick="submitPayment()">Submit Payment Request</button>
+<p id="msg"></p>
 </div>
 
-<div id="register" class="panel hidden">
-<h2>Create Account</h2>
-<input id="name" placeholder="Full Name">
-<input id="email" type="email" placeholder="Email">
-<input id="password" type="password" placeholder="Create Password">
-<button onclick="register()">Register</button>
-<p id="registerMsg"></p>
+<div class="card">
+<h2>Transaction History</h2>
+<div id="history">No transactions yet.</div>
 </div>
 
-<div id="dashboard" class="panel hidden">
-<h2>Customer Dashboard</h2>
-<p id="welcome"></p>
-<button onclick="logout()">Logout</button>
+<div class="card">
+<h2>Our Services</h2>
+<p>Instagram Followers – ₹150 / 1K</p>
+<p>Instagram Likes – ₹50 / 1K</p>
+<p>Instagram Views – ₹5 / 1K</p>
+<p>Instagram Shares – Contact Admin</p>
 </div>
 
-<h2 style="text-align:center">Our Services</h2>
-<div class="services">
-<div class="card"><h3>Instagram Followers</h3><p class="price">₹150 / 1K</p></div>
-<div class="card"><h3>Instagram Likes</h3><p class="price">₹50 / 1K</p></div>
-<div class="card"><h3>Instagram Views</h3><p class="price">₹5 / 1K</p></div>
-<div class="card"><h3>Instagram Shares</h3><p class="price">Contact Admin</p></div>
+<div class="card">
+<h2>Contact Admin</h2>
+<a href="https://wa.me/919821364716">
+<button>WhatsApp</button>
+</a>
+</div>
 </div>
 
 <script>
-function show(id){
-['login','register','dashboard'].forEach(x=>{
-document.getElementById(x).classList.add('hidden');
-});
-document.getElementById(id).classList.remove('hidden');
+function amount(n){document.getElementById("money").value=n}
+function copyUPI(){
+navigator.clipboard.writeText("9821364716-n119@ybl")
+.then(()=>alert("UPI ID Copied"))
+.catch(()=>alert("UPI ID: 9821364716-n119@ybl"));
 }
-
-function register(){
-let n=document.getElementById('name').value;
-let e=document.getElementById('email').value;
-let p=document.getElementById('password').value;
-if(!n||!e||!p){alert('Please fill all details');return;}
-document.getElementById('registerMsg').innerText='Demo registration only. Secure account system is not connected yet.';
+function submitPayment(){
+let money=document.getElementById("money").value;
+let utr=document.getElementById("utr").value.trim();
+if(!money||Number(money)<=0||!utr){alert("Amount aur UTR bharein");return;}
+let data=JSON.parse(localStorage.getItem("hamidHistory")||"[]");
+data.unshift({money,utr,status:"Pending"});
+localStorage.setItem("hamidHistory",JSON.stringify(data));
+document.getElementById("msg").innerText="Demo request saved on this device. Admin verification pending.";
+document.getElementById("money").value="";
+document.getElementById("utr").value="";
+showHistory();
 }
-
-function login(){
-document.getElementById('loginMsg').innerText='Demo login only. Secure account system is not connected yet.';
+function showHistory(){
+let data=JSON.parse(localStorage.getItem("hamidHistory")||"[]");
+document.getElementById("history").innerHTML=data.length?
+data.map(x=>`<p>₹${x.money} — ${x.status}</p>`).join(""):"No transactions yet.";
 }
-
-function logout(){
-show('login');
-}
+showHistory();
 </script>
-
 </body>
 </html>
