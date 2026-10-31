@@ -1,19 +1,20 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Hamid SMM Panel</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
+*{box-sizing:border-box}
 body{margin:0;background:#0b1020;color:white;font-family:Arial}
-header{text-align:center;background:#171f3b;padding:20px}
+header{text-align:center;background:#171f3b;padding:22px}
 h1{color:#8da8ff}
 .container{max-width:600px;margin:auto;padding:15px}
 .card{background:#171f3b;padding:18px;border-radius:14px;margin:15px 0}
-input{width:100%;padding:13px;margin:8px 0;box-sizing:border-box;border:0;border-radius:7px}
-button{background:#536dfe;color:white;border:0;padding:12px;border-radius:7px;margin:5px}
-.upi{background:#26365f;padding:12px;word-break:break-all}
+input,select{width:100%;padding:13px;margin:8px 0;border:0;border-radius:7px}
+button{background:#536dfe;color:white;border:0;padding:12px;border-radius:7px;margin:5px;cursor:pointer}
+.item{background:#26365f;padding:12px;margin:8px 0;border-radius:8px}
 .small{color:#b9c3df;font-size:13px}
 </style>
 </head>
@@ -24,72 +25,140 @@ button{background:#536dfe;color:white;border:0;padding:12px;border-radius:7px;ma
 </header>
 <div class="container">
 
-<div class="card">
-<h2>My Wallet</h2>
-<h1>₹0.00</h1>
-<p class="small">Demo Balance</p>
-</div>
-
-<div class="card">
-<h2>Add Funds</h2>
-<button onclick="amount(100)">₹100</button>
-<button onclick="amount(200)">₹200</button>
-<button onclick="amount(500)">₹500</button>
-<input id="money" type="number" placeholder="Enter Amount">
-<h3>Pay using UPI</h3>
-<div class="upi">9821364716-n119@ybl</div>
-<button onclick="copyUPI()">Copy UPI ID</button>
-<input id="utr" placeholder="Enter UTR / Transaction ID">
-<button onclick="submitPayment()">Submit Payment Request</button>
-<p id="msg"></p>
-</div>
-
-<div class="card">
-<h2>Transaction History</h2>
-<div id="history">No transactions yet.</div>
+<div class="card" id="auth">
+<h2>Login / Signup</h2>
+<input id="email" type="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="signup()">Signup</button>
+<button onclick="login()">Login</button>
+<button onclick="logout()">Logout</button>
+<p id="authmsg" class="small"></p>
 </div>
 
 <div class="card">
 <h2>Our Services</h2>
-<p>Instagram Followers – ₹150 / 1K</p>
-<p>Instagram Likes – ₹50 / 1K</p>
-<p>Instagram Views – ₹5 / 1K</p>
-<p>Instagram Shares – Contact Admin</p>
+<div id="services">Loading...</div>
+</div>
+
+<div class="card">
+<h2>Place Order</h2>
+<select id="service"></select>
+<input id="link" placeholder="Instagram Post / Profile Link">
+<input id="quantity" type="number" min="1" placeholder="Quantity">
+<button onclick="placeOrder()">Submit Order</button>
+<p id="ordermsg" class="small"></p>
+</div>
+
+<div class="card">
+<h2>My Orders</h2>
+<button onclick="loadOrders()">Refresh Orders</button>
+<div id="orders">Login to view orders.</div>
 </div>
 
 <div class="card">
 <h2>Contact Admin</h2>
 <a href="https://wa.me/919821364716">
-<button>WhatsApp</button>
+<button>WhatsApp Admin</button>
 </a>
 </div>
+
 </div>
 
 <script>
-function amount(n){document.getElementById("money").value=n}
-function copyUPI(){
-navigator.clipboard.writeText("9821364716-n119@ybl")
-.then(()=>alert("UPI ID Copied"))
-.catch(()=>alert("UPI ID: 9821364716-n119@ybl"));
+const URL="https://matxhmjpncwwcpzmcjgr.supabase.co";
+const KEY="sb_publishable_vkWlnEro7wE_e8n-Xlt_Q_dRwlkLzg";
+const db=window.supabase.createClient(URL,KEY);
+let services=[];
+
+async function signup(){
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value;
+const {error}=await db.auth.signUp({email,password});
+document.getElementById("authmsg").textContent=
+error?error.message:"Signup successful. Check email if confirmation is required.";
 }
-function submitPayment(){
-let money=document.getElementById("money").value;
-let utr=document.getElementById("utr").value.trim();
-if(!money||Number(money)<=0||!utr){alert("Amount aur UTR bharein");return;}
-let data=JSON.parse(localStorage.getItem("hamidHistory")||"[]");
-data.unshift({money,utr,status:"Pending"});
-localStorage.setItem("hamidHistory",JSON.stringify(data));
-document.getElementById("msg").innerText="Demo request saved on this device. Admin verification pending.";
-document.getElementById("money").value="";
-document.getElementById("utr").value="";
-showHistory();
+
+async function login(){
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value;
+const {error}=await db.auth.signInWithPassword({email,password});
+document.getElementById("authmsg").textContent=
+error?error.message:"Login successful!";
+if(!error)loadOrders();
 }
-function showHistory(){
-let data=JSON.parse(localStorage.getItem("hamidHistory")||"[]");
-document.getElementById("history").innerHTML=data.length?
-data.map(x=>`<p>₹${x.money} — ${x.status}</p>`).join(""):"No transactions yet.";
+
+async function logout(){
+const {error}=await db.auth.signOut();
+document.getElementById("authmsg").textContent=
+error?error.message:"Logged out.";
+document.getElementById("orders").textContent="Login to view orders.";
 }
-showHistory();
+
+async function loadServices(){
+const box=document.getElementById("services");
+const select=document.getElementById("service");
+const {data,error}=await db.from("services")
+.select("id,name,price").eq("is_active",true);
+if(error){box.textContent=error.message;return;}
+services=data||[];
+box.innerHTML="";
+select.innerHTML="";
+services.forEach(s=>{
+const div=document.createElement("div");
+div.className="item";
+div.textContent=s.name+" — ₹"+s.price;
+box.appendChild(div);
+const option=document.createElement("option");
+option.value=s.id;
+option.textContent=s.name+" — ₹"+s.price;
+select.appendChild(option);
+});
+}
+
+async function placeOrder(){
+const {data:{user}}=await db.auth.getUser();
+if(!user){alert("Please login first");return;}
+const id=Number(document.getElementById("service").value);
+const service=services.find(s=>s.id===id);
+const link=document.getElementById("link").value.trim();
+const quantity=Number(document.getElementById("quantity").value);
+if(!service||!link||!Number.isInteger(quantity)||quantity<1){
+alert("Enter valid order details");return;
+}
+const total=Number(service.price)*quantity/1000;
+const {error}=await db.from("orders").insert({
+user_id:user.id,
+service_id:service.id,
+quantity:quantity,
+target_link:link,
+total_price:total,
+status:"pending"
+});
+document.getElementById("ordermsg").textContent=
+error?error.message:"Order submitted. Pending admin review.";
+if(!error)loadOrders();
+}
+
+async function loadOrders(){
+const {data:{user}}=await db.auth.getUser();
+if(!user){document.getElementById("orders").textContent="Please login first.";return;}
+const {data,error}=await db.from("orders")
+.select("id,quantity,total_price,status,created_at")
+.eq("user_id",user.id).order("created_at",{ascending:false});
+const box=document.getElementById("orders");
+if(error){box.textContent=error.message;return;}
+box.innerHTML="";
+(data||[]).forEach(o=>{
+const div=document.createElement("div");
+div.className="item";
+div.textContent="Order #"+o.id+" | Qty: "+o.quantity+
+" | ₹"+o.total_price+" | "+o.status;
+box.appendChild(div);
+});
+if(!data||!data.length)box.textContent="No orders yet.";
+}
+
+loadServices();
 </script>
 </body>
 </html>
