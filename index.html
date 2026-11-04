@@ -1,36 +1,73 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hamid SMM Panel</title>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <style>
-body{margin:0;background:#0b1020;color:white;font-family:Arial;padding:20px}
+body{
+ margin:0;
+ background:#0b1020;
+ color:white;
+ font-family:Arial;
+ padding:20px;
+}
 .container{max-width:500px;margin:auto}
 h1{text-align:center;color:#38bdf8}
-.card{background:#171f3b;padding:18px;border-radius:12px;margin:15px 0}
-input,button{width:100%;padding:13px;margin:7px 0;border:0;border-radius:7px;box-sizing:border-box}
-button{background:#0ea5e9;color:white;font-weight:bold}
-.service{background:#263451;padding:12px;margin:8px 0;border-radius:8px}
+.card{
+ background:#171f3b;
+ padding:18px;
+ border-radius:12px;
+ margin:15px 0;
+}
+input,button,select{
+ width:100%;
+ padding:13px;
+ margin:7px 0;
+ border:0;
+ border-radius:7px;
+ box-sizing:border-box;
+}
+button{
+ background:#0ea5e9;
+ color:white;
+ font-weight:bold;
+ cursor:pointer;
+}
+.service{
+ background:#263451;
+ padding:12px;
+ margin:8px 0;
+ border-radius:8px;
+}
 #app{display:none}
 </style>
 </head>
+
 <body>
 <div class="container">
+
 <h1>HAMID SMM PANEL</h1>
 <p style="text-align:center">Grow Your Social Media 🚀</p>
 
 <div class="card" id="auth">
 <h3>Login / Signup</h3>
+
 <input id="email" type="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
+
 <button onclick="signup()">Signup</button>
 <button onclick="login()">Login</button>
+
 <p id="msg"></p>
 </div>
 
 <div id="app">
+
 <div class="card">
 <h3>Welcome!</h3>
 <p id="user"></p>
@@ -44,73 +81,199 @@ button{background:#0ea5e9;color:white;font-weight:bold}
 
 <div class="card">
 <h3>Place Order</h3>
-<select id="service"></select>
+
+<select id="service">
+<option value="">Select Service</option>
+</select>
+
 <input id="quantity" type="number" placeholder="Quantity">
+
 <button onclick="order()">Place Order</button>
 <p id="orderMsg"></p>
 </div>
+
 </div>
 </div>
 
 <script>
-const SUPABASE_URL = "https://matxhmjpncwwcpzmcjgr.supabase.co";
-const SUPABASE_KEY = "sb_publishable_vkWlnEroI7wE_e8n-Xlt_Q_dRwlkLzg";
-const db = supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SUPABASE_URL =
+"https://matxhmjpncwwcpzmcjgr.supabase.co";
+
+const SUPABASE_KEY =
+"sb_publishable_vkWlnEroI7wE_e8n-Xlt_Q_dRwlkLzg";
+
+const db = supabase.createClient(
+SUPABASE_URL,
+SUPABASE_KEY
+);
 
 async function signup(){
- const email=document.getElementById("email").value;
- const password=document.getElementById("password").value;
- const {error}=await db.auth.signUp({email,password});
- document.getElementById("msg").innerText=error?error.message:"Signup successful! Email confirm karo.";
+
+ const email = document.getElementById("email").value.trim();
+ const password = document.getElementById("password").value;
+ const msg = document.getElementById("msg");
+
+ if(!email || password.length < 6){
+  msg.innerText="Email aur 6 character password dalo.";
+  return;
+ }
+
+ msg.innerText="Please wait...";
+
+ try{
+  const {data,error}=await db.auth.signUp({
+   email:email,
+   password:password
+  });
+
+  if(error) throw error;
+
+  if(data.session){
+   await showApp(data.user);
+  }else{
+   msg.innerText="Signup successful! Email confirm karo.";
+  }
+
+ }catch(error){
+  msg.innerText="Error: "+error.message;
+ }
 }
+
 async function login(){
- const email=document.getElementById("email").value;
+
+ const email=document.getElementById("email").value.trim();
  const password=document.getElementById("password").value;
- const {data,error}=await db.auth.signInWithPassword({email,password});
- if(error){document.getElementById("msg").innerText=error.message;return;}
- showApp(data.user);
+ const msg=document.getElementById("msg");
+
+ if(!email || !password){
+  msg.innerText="Email aur password dalo.";
+  return;
+ }
+
+ msg.innerText="Logging in...";
+
+ try{
+  const {data,error}=await db.auth.signInWithPassword({
+   email:email,
+   password:password
+  });
+
+  if(error) throw error;
+
+  await showApp(data.user);
+
+ }catch(error){
+  msg.innerText="Error: "+error.message;
+ }
 }
+
 async function logout(){
  await db.auth.signOut();
  location.reload();
 }
+
 async function showApp(user){
+
  document.getElementById("auth").style.display="none";
  document.getElementById("app").style.display="block";
  document.getElementById("user").innerText=user.email;
- loadServices();
+
+ await loadServices();
 }
+
 async function loadServices(){
+
  const box=document.getElementById("services");
  const select=document.getElementById("service");
- const {data,error}=await db.from("services").select("*");
- if(error){box.innerText="Error: "+error.message;return;}
- box.innerHTML="";
- select.innerHTML="";
- if(!data.length){box.innerText="No services available yet.";return;}
- data.forEach(s=>{
-  box.innerHTML+=`<div class="service">${s.name}<br>${s.description||""}</div>`;
-  select.innerHTML+=`<option value="${s.id}">${s.name}</option>`;
- });
+
+ box.innerText="Loading services...";
+
+ try{
+  const {data,error}=await db.from("services").select("*");
+
+  if(error) throw error;
+
+  box.innerHTML="";
+  select.innerHTML='<option value="">Select Service</option>';
+
+  if(!data || data.length===0){
+   box.innerText="No services available yet.";
+   return;
+  }
+
+  data.forEach(s=>{
+
+   const item=document.createElement("div");
+   item.className="service";
+   item.textContent=s.name;
+   box.appendChild(item);
+
+   const option=document.createElement("option");
+   option.value=s.id;
+   option.textContent=s.name;
+   select.appendChild(option);
+
+  });
+
+ }catch(error){
+  box.innerText="Error: "+error.message;
+ }
 }
+
 async function order(){
- const {data:{user}}=await db.auth.getUser();
- const {error}=await db.from("orders").insert({
+
+ const msg=document.getElementById("orderMsg");
+ const serviceId=document.getElementById("service").value;
+ const qty=Number(document.getElementById("quantity").value);
+
+ if(!serviceId || !Number.isInteger(qty) || qty<=0){
+  msg.innerText="Service aur valid quantity select karo.";
+  return;
+ }
+
+ msg.innerText="Submitting order...";
+
+ try{
+
+  const {data:{user},error:userError}=await db.auth.getUser();
+
+  if(userError) throw userError;
+  if(!user) throw new Error("Please login first.");
+
+  const {error}=await db.from("orders").insert({
    user_id:user.id,
-   customer_name:user.email,
-   service_id:service_id,
-   quantity:quantity,
+   service_id:Number(serviceId),
+   quantity:qty,
    status:"Pending"
-});
- 
- });
- document.getElementById("orderMsg").innerText=error?"Error: "+error.message:"Order submitted! Status: Pending";
+  });
+
+  if(error) throw error;
+
+  msg.innerText="Order submitted! Status: Pending";
+
+ }catch(error){
+  msg.innerText="Error: "+error.message;
+ }
 }
+
 async function checkSession(){
- const {data}=await db.auth.getSession();
- if(data.session)showApp(data.session.user);
+
+ try{
+  const {data,error}=await db.auth.getSession();
+
+  if(error) throw error;
+
+  if(data.session){
+   await showApp(data.session.user);
+  }
+
+ }catch(error){
+  document.getElementById("msg").innerText=error.message;
+ }
 }
+
 checkSession();
 </script>
+
 </body>
 </html>
