@@ -2,522 +2,163 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HAMID SMM PANEL</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hamid SMM Panel</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box}
-body{margin:0;padding:15px;background:#0b1020;color:white;font-family:Arial}
-.container{max-width:650px;margin:auto}
-h1{text-align:center;color:#38bdf8}
-.card{background:#171f3b;padding:16px;border-radius:12px;margin:15px 0}
-input,button,select{width:100%;padding:12px;margin:7px 0;border:0;border-radius:7px}
-button{background:#0ea5e9;color:white;font-weight:bold;cursor:pointer}
-.service,.item{background:#263451;padding:12px;margin:8px 0;border-radius:8px}
-#app,#admin{display:none}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.stat{background:#263451;padding:15px;text-align:center;border-radius:10px}
-.stat strong{display:block;color:#38bdf8;font-size:24px}
-.scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:450px}
-td,th{padding:10px;border-bottom:1px solid #40506c;font-size:13px}
-.small{font-size:12px;color:#cbd5e1}
+body{margin:0;background:#0b1020;color:white;font-family:Arial}
+header{text-align:center;background:#171f3b;padding:22px}
+h1{color:#8da8ff}
+.container{max-width:600px;margin:auto;padding:15px}
+.card{background:#171f3b;padding:18px;border-radius:14px;margin:15px 0}
+input,select{width:100%;padding:13px;margin:8px 0;border:0;border-radius:7px}
+button{background:#536dfe;color:white;border:0;padding:12px;border-radius:7px;margin:5px;cursor:pointer}
+.item{background:#26365f;padding:12px;margin:8px 0;border-radius:8px}
+.small{color:#b9c3df;font-size:13px}
 </style>
 </head>
 <body>
+<header>
+<h1>HAMID SMM PANEL</h1>
+<p>Grow Your Social Media 🚀</p>
+</header>
 <div class="container">
 
-<h1>HAMID SMM PANEL</h1>
-<p style="text-align:center">Grow Your Social Media 🚀</p>
-
 <div class="card" id="auth">
-<h3>Login / Signup</h3>
+<h2>Login / Signup</h2>
 <input id="email" type="email" placeholder="Email">
 <input id="password" type="password" placeholder="Password">
 <button onclick="signup()">Signup</button>
 <button onclick="login()">Login</button>
-<p id="msg"></p>
-</div>
-
-<div id="app">
-<div class="card">
-<h3>Welcome Customer!</h3>
-<p id="user"></p>
-<p id="wallet"></p>
 <button onclick="logout()">Logout</button>
+<p id="authmsg" class="small"></p>
 </div>
 
 <div class="card">
-<h3>Our Services</h3>
+<h2>Our Services</h2>
 <div id="services">Loading...</div>
 </div>
 
 <div class="card">
-<h3>Place Order</h3>
-<select id="service">
-<option value="">Select Service</option>
-</select>
+<h2>Place Order</h2>
+<select id="service"></select>
+<input id="link" placeholder="Instagram Post / Profile Link">
 <input id="quantity" type="number" min="1" placeholder="Quantity">
-<button onclick="placeOrder()">Place Order</button>
-<p id="orderMsg"></p>
-</div>
-</div>
-
-<div id="admin">
-<div class="card">
-<h2 style="color:#38bdf8">ADMIN DASHBOARD</h2>
-<p id="adminEmail"></p>
-<button onclick="logout()">Logout</button>
+<button onclick="placeOrder()">Submit Order</button>
+<p id="ordermsg" class="small"></p>
 </div>
 
 <div class="card">
-<h3>Dashboard Overview</h3>
-<div class="stats">
-<div class="stat">Total Orders<strong id="totalOrders">0</strong></div>
-<div class="stat">Pending<strong id="pendingOrders">0</strong></div>
-<div class="stat">Completed<strong id="completedOrders">0</strong></div>
-<div class="stat">Customers<strong id="totalCustomers">0</strong></div>
-</div>
+<h2>My Orders</h2>
+<button onclick="loadOrders()">Refresh Orders</button>
+<div id="orders">Login to view orders.</div>
 </div>
 
 <div class="card">
-<h3>Manage Orders</h3>
-<button onclick="loadAdminData()">Refresh Orders</button>
-<div id="adminOrders" class="scroll"></div>
-</div>
-
-<div class="card">
-<h3>All Customers</h3>
-<div id="customers" class="scroll"></div>
-</div>
-
-<div class="card">
-<h3>Manage Services & Prices</h3>
-<div id="adminServices"></div>
-</div>
-<p id="adminMsg"></p>
+<h2>Contact Admin</h2>
+<a href="https://wa.me/919821364716">
+<button>WhatsApp Admin</button>
+</a>
 </div>
 
 </div>
 
 <script>
-const SUPABASE_URL="https://matxhmjpncwwcpzmcjgr.supabase.co";
-const SUPABASE_KEY="sb_publishable_vkWlnEroI7wE_e8n-Xlt_Q_dRwlkLzg";
-
-const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-
-let currentUser=null;
-let isAdmin=false;
-let serviceCache=[];
-
-function msg(id,text){
- document.getElementById(id).textContent=text;
-}
-
-function showPanel(name){
- ["auth","app","admin"].forEach(id=>{
-  document.getElementById(id).style.display=
-   id===name?"block":"none";
- });
-}
+const URL="https://matxhmjpncwwcpzmcjgr.supabase.co";
+const KEY="sb_publishable_vkWlnEro7wE_e8n-Xlt_Q_dRwlkLzg";
+const db=window.supabase.createClient(URL,KEY);
+let services=[];
 
 async function signup(){
- const email=document.getElementById("email").value.trim();
- const password=document.getElementById("password").value;
-
- if(!email||password.length<6){
-  msg("msg","Valid email aur 6 character password dalo.");
-  return;
- }
-
- msg("msg","Please wait...");
-
- try{
-  const {data,error}=await db.auth.signUp({email,password});
-  if(error)throw error;
-
-  if(data.session){
-   await openPanel(data.user);
-  }else{
-   msg("msg","Signup successful! Email confirm karo, phir login karo.");
-  }
- }catch(e){
-  msg("msg","Signup Error: "+e.message);
- }
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value;
+const {error}=await db.auth.signUp({email,password});
+document.getElementById("authmsg").textContent=
+error?error.message:"Signup successful. Check email if confirmation is required.";
 }
 
 async function login(){
- const email=document.getElementById("email").value.trim();
- const password=document.getElementById("password").value;
-
- if(!email||!password){
-  msg("msg","Email aur password dalo.");
-  return;
- }
-
- msg("msg","Logging in...");
-
- try{
-  const {data,error}=await db.auth.signInWithPassword({email,password});
-  if(error)throw error;
-  await openPanel(data.user);
- }catch(e){
-  msg("msg","Login Error: "+e.message);
- }
-}
-
-async function openPanel(user){
- currentUser=user;
- showPanel("auth");
- msg("msg","Checking account...");
-
- try{
-  const {data,error}=await db.from("profiles")
-   .select("is_admin,wallet_balance")
-   .eq("id",user.id)
-   .single();
-
-  if(error)throw error;
-
-  isAdmin=data.is_admin===true;
-
-  if(isAdmin){
-   showPanel("admin");
-   msg("adminEmail",user.email);
-   await loadAdminData();
-  }else{
-   showPanel("app");
-   msg("user",user.email);
-   msg("wallet","Wallet: ₹"+Number(data.wallet_balance||0).toFixed(2));
-   await loadServices();
-  }
-
- }catch(e){
-  showPanel("auth");
-  msg("msg","Profile Error: "+e.message);
- }
+const email=document.getElementById("email").value.trim();
+const password=document.getElementById("password").value;
+const {error}=await db.auth.signInWithPassword({email,password});
+document.getElementById("authmsg").textContent=
+error?error.message:"Login successful!";
+if(!error)loadOrders();
 }
 
 async function logout(){
- await db.auth.signOut();
- location.reload();
+const {error}=await db.auth.signOut();
+document.getElementById("authmsg").textContent=
+error?error.message:"Logged out.";
+document.getElementById("orders").textContent="Login to view orders.";
 }
 
 async function loadServices(){
- const box=document.getElementById("services");
- const select=document.getElementById("service");
-
- box.textContent="Loading services...";
- select.innerHTML='<option value="">Select Service</option>';
-
- try{
-  const {data,error}=await db.from("services")
-   .select("id,name,description,price,is_active")
-   .eq("is_active",true)
-   .order("id",{ascending:true});
-
-  if(error)throw error;
-
-  serviceCache=data||[];
-
-  if(!serviceCache.length){
-   box.textContent="No active services found.";
-   return;
-  }
-
-  box.innerHTML="";
-
-  serviceCache.forEach(s=>{
-   const item=document.createElement("div");
-   item.className="service";
-
-   const name=document.createElement("strong");
-   name.textContent=s.name;
-
-   const desc=document.createElement("p");
-   desc.className="small";
-   desc.textContent=s.description||"";
-
-   const price=document.createElement("p");
-   price.textContent="₹"+Number(s.price).toFixed(2)+" / 1K";
-
-   item.append(name,desc,price);
-   box.appendChild(item);
-
-   const option=document.createElement("option");
-   option.value=s.id;
-   option.textContent=s.name+" - ₹"+Number(s.price).toFixed(2);
-   select.appendChild(option);
-  });
-
- }catch(e){
-  box.textContent="Services Error: "+e.message;
- }
+const box=document.getElementById("services");
+const select=document.getElementById("service");
+const {data,error}=await db.from("services")
+.select("id,name,price").eq("is_active",true);
+if(error){box.textContent=error.message;return;}
+services=data||[];
+box.innerHTML="";
+select.innerHTML="";
+services.forEach(s=>{
+const div=document.createElement("div");
+div.className="item";
+div.textContent=s.name+" — ₹"+s.price;
+box.appendChild(div);
+const option=document.createElement("option");
+option.value=s.id;
+option.textContent=s.name+" — ₹"+s.price;
+select.appendChild(option);
+});
 }
 
 async function placeOrder(){
- if(!currentUser)return;
-
- const serviceId=Number(document.getElementById("service").value);
- const quantity=Number(document.getElementById("quantity").value);
-
- if(!serviceId||!serviceCache.some(s=>Number(s.id)===serviceId)){
-  msg("orderMsg","Select a service.");
-  return;
- }
-
- if(!Number.isInteger(quantity)||quantity<1){
-  msg("orderMsg","Enter valid quantity.");
-  return;
- }
-
- msg("orderMsg","Submitting order...");
-
- try{
-  const {error}=await db.from("orders").insert({
-   user_id:currentUser.id,
-   customer_name:currentUser.email,
-   service_id:serviceId,
-   quantity:quantity,
-   status:"Pending"
-  });
-
-  if(error)throw error;
-
-  msg("orderMsg","Order submitted successfully! Status: Pending");
-  document.getElementById("quantity").value="";
-
- }catch(e){
-  msg("orderMsg","Order Error: "+e.message);
- }
-}async function loadAdminData(){
- msg("adminMsg","Loading dashboard...");
-
- try{
-  const [ordersRes,profilesRes,servicesRes]=await Promise.all([
-   db.from("orders")
-    .select("id,customer_name,service_id,quantity,status,created_at")
-    .order("id",{ascending:false}),
-   db.from("profiles")
-    .select("id,wallet_balance,is_admin"),
-   db.from("services")
-    .select("id,name,description,price,is_active")
-    .order("id",{ascending:true})
-  ]);
-
-  if(ordersRes.error)throw ordersRes.error;
-  if(profilesRes.error)throw profilesRes.error;
-  if(servicesRes.error)throw servicesRes.error;
-
-  const orders=ordersRes.data||[];
-  const profiles=profilesRes.data||[];
-
-  document.getElementById("totalOrders").textContent=orders.length;
-  document.getElementById("pendingOrders").textContent=
-   orders.filter(o=>o.status==="Pending").length;
-  document.getElementById("completedOrders").textContent=
-   orders.filter(o=>o.status==="Completed").length;
-  document.getElementById("totalCustomers").textContent=
-   profiles.filter(p=>p.is_admin!==true).length;
-
-  showOrders(orders);
-  showCustomers(profiles);
-  showAdminServices(servicesRes.data||[]);
-
-  msg("adminMsg","Dashboard updated successfully.");
-
- }catch(e){
-  msg("adminMsg","Admin Error: "+e.message);
- }
+const {data:{user}}=await db.auth.getUser();
+if(!user){alert("Please login first");return;}
+const id=Number(document.getElementById("service").value);
+const service=services.find(s=>s.id===id);
+const link=document.getElementById("link").value.trim();
+const quantity=Number(document.getElementById("quantity").value);
+if(!service||!link||!Number.isInteger(quantity)||quantity<1){
+alert("Enter valid order details");return;
 }
-
-function showOrders(orders){
- const box=document.getElementById("adminOrders");
- box.innerHTML="";
-
- if(!orders.length){
-  box.textContent="No orders found.";
-  return;
- }
-
- const table=document.createElement("table");
- table.innerHTML=
-  "<tr><th>ID</th><th>Customer</th><th>Service ID</th><th>Qty</th><th>Status</th><th>Action</th></tr>";
-
- orders.forEach(o=>{
-  const tr=document.createElement("tr");
-
-  const values=[
-   o.id,
-   o.customer_name||o.user_id||"Customer",
-   o.service_id,
-   o.quantity
-  ];
-
-  values.forEach(value=>{
-   const td=document.createElement("td");
-   td.textContent=value;
-   tr.appendChild(td);
-  });
-
-  const statusTd=document.createElement("td");
-  const status=document.createElement("select");
-
-  ["Pending","Processing","Completed","Cancelled"].forEach(s=>{
-   const option=document.createElement("option");
-   option.value=s;
-   option.textContent=s;
-   if(o.status===s)option.selected=true;
-   status.appendChild(option);
-  });
-
-  statusTd.appendChild(status);
-  tr.appendChild(statusTd);
-
-  const actionTd=document.createElement("td");
-  const save=document.createElement("button");
-  save.textContent="Save";
-  save.onclick=()=>updateOrder(o.id,status.value);
-  actionTd.appendChild(save);
-  tr.appendChild(actionTd);
-
-  table.appendChild(tr);
- });
-
- box.appendChild(table);
-}
-
-async function updateOrder(id,status){
- msg("adminMsg","Updating order...");
-
- try{
-  const {error}=await db.from("orders")
-   .update({status:status})
-   .eq("id",id);
-
-  if(error)throw error;
-
-  msg("adminMsg","Order updated successfully.");
-  await loadAdminData();
-
- }catch(e){
-  msg("adminMsg","Update Error: "+e.message);
- }
-}
-
-function showCustomers(profiles){
- const box=document.getElementById("customers");
- box.innerHTML="";
-
- if(!profiles.length){
-  box.textContent="No customers found.";
-  return;
- }
-
- const table=document.createElement("table");
- table.innerHTML=
-  "<tr><th>User ID</th><th>Wallet</th><th>Role</th></tr>";
-
- profiles.forEach(p=>{
-  const tr=document.createElement("tr");
-
-  [p.id, "₹"+Number(p.wallet_balance||0).toFixed(2),
-   p.is_admin===true?"Admin":"Customer"].forEach(value=>{
-   const td=document.createElement("td");
-   td.textContent=value;
-   tr.appendChild(td);
-  });
-
-  table.appendChild(tr);
- });
-
- box.appendChild(table);
-}
-
-function showAdminServices(services){
- const box=document.getElementById("adminServices");
- box.innerHTML="";
-
- if(!services.length){
-  box.textContent="No services found.";
-  return;
- }
-
- services.forEach(s=>{
-  const item=document.createElement("div");
-  item.className="item";
-
-  const name=document.createElement("strong");
-  name.textContent=s.name;
-
-  const price=document.createElement("input");
-  price.type="number";
-  price.min="0";
-  price.step="0.01";
-  price.value=s.price;
-  price.placeholder="Price per 1K";
-
-  const activeLabel=document.createElement("label");
-  activeLabel.style.display="block";
-  activeLabel.style.margin="8px 0";
-
-  const active=document.createElement("input");
-  active.type="checkbox";
-  active.checked=s.is_active===true;
-  active.style.width="auto";
-
-  activeLabel.append(active,document.createTextNode(" Active"));
-
-  const save=document.createElement("button");
-  save.textContent="Save Service";
-  save.onclick=()=>updateService(s.id,price.value,active.checked);
-
-  item.append(name,price,activeLabel,save);
-  box.appendChild(item);
- });
-}
-
-async function updateService(id,price,active){
- const amount=Number(price);
-
- if(price===""||!Number.isFinite(amount)||amount<0){
-  msg("adminMsg","Valid price enter karo.");
-  return;
- }
-
- msg("adminMsg","Saving service...");
-
- try{
-  const {error}=await db.from("services")
-   .update({
-    price:amount,
-    is_active:active
-   })
-   .eq("id",id);
-
-  if(error)throw error;
-
-  msg("adminMsg","Service updated successfully.");
-  await loadAdminData();
-
- }catch(e){
-  msg("adminMsg","Service Error: "+e.message);
- }
-}
-
-db.auth.getSession().then(({data,error})=>{
- if(error){
-  msg("msg","Session Error: "+error.message);
-  return;
- }
-
- if(data.session){
-  openPanel(data.session.user);
- }else{
-  showPanel("auth");
- }
+const total=Number(service.price)*quantity/1000;
+const {error}=await db.from("orders").insert({
+user_id:user.id,
+service_id:service.id,
+quantity:quantity,
+target_link:link,
+total_price:total,
+status:"pending"
 });
+document.getElementById("ordermsg").textContent=
+error?error.message:"Order submitted. Pending admin review.";
+if(!error)loadOrders();
+}
 
+async function loadOrders(){
+const {data:{user}}=await db.auth.getUser();
+if(!user){document.getElementById("orders").textContent="Please login first.";return;}
+const {data,error}=await db.from("orders")
+.select("id,quantity,total_price,status,created_at")
+.eq("user_id",user.id).order("created_at",{ascending:false});
+const box=document.getElementById("orders");
+if(error){box.textContent=error.message;return;}
+box.innerHTML="";
+(data||[]).forEach(o=>{
+const div=document.createElement("div");
+div.className="item";
+div.textContent="Order #"+o.id+" | Qty: "+o.quantity+
+" | ₹"+o.total_price+" | "+o.status;
+box.appendChild(div);
+});
+if(!data||!data.length)box.textContent="No orders yet.";
+}
+
+loadServices();
 </script>
 </body>
 </html>
