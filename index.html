@@ -95,12 +95,14 @@ async function loadServices(){
 }
 async function order(){
  const {data:{user}}=await db.auth.getUser();
- if(!user)return;
- const service_id=Number(document.getElementById("service").value);
- const quantity=Number(document.getElementById("quantity").value);
- if(!service_id||!quantity||quantity<1){document.getElementById("orderMsg").innerText="Valid service aur quantity daalo.";return;}
  const {error}=await db.from("orders").insert({
-  user_id:user.id,service_id,quantity,status:"Pending"
+   user_id:user.id,
+   customer_name:user.email,
+   service_id:service_id,
+   quantity:quantity,
+   status:"Pending"
+});
+ 
  });
  document.getElementById("orderMsg").innerText=error?"Error: "+error.message:"Order submitted! Status: Pending";
 }
