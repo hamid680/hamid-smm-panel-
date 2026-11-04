@@ -8,14 +8,22 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-body{margin:0;background:#0b1020;color:white;font-family:Arial;padding:20px}
-.container{max-width:500px;margin:auto}
+*{box-sizing:border-box}
+body{margin:0;background:#0b1020;color:white;font-family:Arial;padding:15px}
+.container{max-width:650px;margin:auto}
 h1{text-align:center;color:#38bdf8}
-.card{background:#171f3b;padding:18px;border-radius:12px;margin:15px 0}
-input,button,select{width:100%;padding:13px;margin:7px 0;border:0;border-radius:7px;box-sizing:border-box}
+.card{background:#171f3b;padding:16px;border-radius:12px;margin:15px 0;overflow:hidden}
+input,button,select{width:100%;padding:12px;margin:7px 0;border:0;border-radius:7px}
 button{background:#0ea5e9;color:white;font-weight:bold;cursor:pointer}
-.service{background:#263451;padding:12px;margin:8px 0;border-radius:8px}
-#app{display:none}
+.service,.item{background:#263451;padding:12px;margin:8px 0;border-radius:8px}
+#app,#admin{display:none}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:#263451;padding:15px;border-radius:10px;text-align:center}
+.stat strong{display:block;color:#38bdf8;font-size:24px;margin-top:8px}
+.small{font-size:12px;color:#cbd5e1}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:450px}
+td,th{padding:10px;border-bottom:1px solid #40506c;text-align:left;font-size:13px}
 </style>
 </head>
 
@@ -34,10 +42,11 @@ button{background:#0ea5e9;color:white;font-weight:bold;cursor:pointer}
 <p id="msg"></p>
 </div>
 
+<!-- CUSTOMER PANEL -->
 <div id="app">
 
 <div class="card">
-<h3>Welcome!</h3>
+<h3>Welcome Customer!</h3>
 <p id="user"></p>
 <button onclick="logout()">Logout</button>
 </div>
@@ -58,16 +67,56 @@ button{background:#0ea5e9;color:white;font-weight:bold;cursor:pointer}
 </div>
 
 </div>
+
+<!-- ADMIN PANEL -->
+<div id="admin">
+
+<div class="card">
+<h2 style="color:#38bdf8">ADMIN DASHBOARD</h2>
+<p id="adminEmail"></p>
+<button onclick="logout()">Logout</button>
+</div>
+
+<div class="card">
+<h3>Dashboard Overview</h3>
+<div class="stats">
+<div class="stat">Total Orders<strong id="totalOrders">0</strong></div>
+<div class="stat">Pending<strong id="pendingOrders">0</strong></div>
+<div class="stat">Completed<strong id="completedOrders">0</strong></div>
+<div class="stat">Customers<strong id="totalCustomers">0</strong></div>
+</div>
+</div>
+
+<div class="card">
+<h3>Manage Orders</h3>
+<button onclick="loadAdminData()">Refresh Orders</button>
+<div id="adminOrders" class="scroll">Loading...</div>
+</div>
+
+<div class="card">
+<h3>All Customers</h3>
+<div id="customers" class="scroll">Loading...</div>
+</div>
+
+<div class="card">
+<h3>Manage Services & Prices</h3>
+<div id="adminServices">Loading...</div>
+</div>
+
+<p id="adminMsg"></p>
+</div>
+
 </div>
 
 <script>
 const SUPABASE_URL="https://matxhmjpncwwcpzmcjgr.supabase.co";
 const SUPABASE_KEY="sb_publishable_vkWlnEroI7wE_e8n-Xlt_Q_dRwlkLzg";
-
 const db=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-async function signup(){
+let currentUser=null;
+let isAdmin=false;
 
+async function signup(){
  const email=document.getElementById("email").value.trim();
  const password=document.getElementById("password").value;
  const msg=document.getElementById("msg");
@@ -81,37 +130,61 @@ async function signup(){
 
  try{
   const {data,error}=await db.auth.signUp({email,password});
-  if(error) throw error;
+  if(error)throw error;
 
-  if(data.session){
-   await showApp(data.user);
-  }else{
-   msg.innerText="Signup successful! Email confirm karo.";
-  }
- }catch(error){
-  msg.innerText="Error: "+error.message;
- }
+  if(data.session)await openPanel(data.user);
+  else msg.innerText="Signup successful! Email confirm karo.";
+ }catch(e){msg.innerText="Error: "+e.message;}
 }
 
 async function login(){
-
  const email=document.getElementById("email").value.trim();
  const password=document.getElementById("password").value;
- const msg=document.getElementById("msg");
 
  if(!email || !password){
-  msg.innerText="Email aur password dalo.";
+  document.getElementById("msg").innerText="Email aur password dalo.";
   return;
  }
 
- msg.innerText="Logging in...";
+ document.getElementById("msg").innerText="Logging in...";
 
  try{
   const {data,error}=await db.auth.signInWithPassword({email,password});
-  if(error) throw error;
-  await showApp(data.user);
- }catch(error){
-  msg.innerText="Error: "+error.message;
+  if(error)throw error;
+  await openPanel(data.user);
+ }catch(e){
+  document.getElementById("msg").innerText="Error: "+e.message;
+ }
+}
+
+async function openPanel(user){
+ currentUser=user;
+
+ document.getElementById("auth").style.display="none";
+ document.getElementById("app").style.display="none";
+ document.getElementById("admin").style.display="none";
+
+ try{
+  const {data,error}=await db.from("profiles")
+   .select("is_admin")
+   .eq("id",user.id)
+   .single();
+
+  if(error)throw error;
+
+  isAdmin=data.is_admin===true;
+
+  if(isAdmin){
+   document.getElementById("admin").style.display="block";
+   document.getElementById("adminEmail").innerText=user.email;
+   await loadAdminData();
+  }else{
+   document.getElementById("app").style.display="block";
+   document.getElementById("user").innerText=user.email;
+   await loadServices();
+  }
+ }catch(e){
+  document.getElementById("msg").innerText="Profile Error: "+e.message;
  }
 }
 
@@ -120,39 +193,25 @@ async function logout(){
  location.reload();
 }
 
-async function showApp(user){
-
- document.getElementById("auth").style.display="none";
- document.getElementById("app").style.display="block";
- document.getElementById("user").innerText=user.email;
-
- await loadServices();
-}
-
 async function loadServices(){
-
  const box=document.getElementById("services");
  const select=document.getElementById("service");
 
  box.innerText="Loading services...";
 
  try{
-  const {data,error}=await db.from("services").select("*").eq("is_active",true);
+  const {data,error}=await db.from("services")
+   .select("*").eq("is_active",true);
 
-  if(error) throw error;
+  if(error)throw error;
 
   box.innerHTML="";
   select.innerHTML='<option value="">Select Service</option>';
 
-  if(!data || data.length===0){
-   box.innerText="No services available.";
-   return;
-  }
-
   data.forEach(s=>{
    const item=document.createElement("div");
    item.className="service";
-   item.textContent=s.name+" - ₹"+(s.price||0)+"/1K";
+   item.textContent=s.name+" - ₹"+s.price+"/1K";
    box.appendChild(item);
 
    const option=document.createElement("option");
@@ -161,30 +220,25 @@ async function loadServices(){
    select.appendChild(option);
   });
 
- }catch(error){
-  box.innerText="Error: "+error.message;
- }
+ }catch(e){box.innerText="Error: "+e.message;}
 }
 
 async function order(){
-
  const msg=document.getElementById("orderMsg");
  const serviceId=document.getElementById("service").value;
  const qty=Number(document.getElementById("quantity").value);
 
  if(!serviceId || !Number.isInteger(qty) || qty<=0){
-  msg.innerText="Service aur valid quantity select karo.";
+  msg.innerText="Select service and valid quantity.";
   return;
  }
 
- msg.innerText="Submitting order...";
+ msg.innerText="Submitting...";
 
  try{
-
   const {data:{user},error:userError}=await db.auth.getUser();
-
-  if(userError) throw userError;
-  if(!user) throw new Error("Please login first.");
+  if(userError)throw userError;
+  if(!user)throw new Error("Please login first.");
 
   const {error}=await db.from("orders").insert({
    user_id:user.id,
@@ -194,31 +248,203 @@ async function order(){
    status:"Pending"
   });
 
-  if(error) throw error;
+  if(error)throw error;
 
   msg.innerText="Order submitted successfully! Status: Pending";
+ }catch(e){msg.innerText="Error: "+e.message;}
+}
 
- }catch(error){
-  msg.innerText="Error: "+error.message;
+// ADMIN DASHBOARD
+
+async function loadAdminData(){
+ if(!isAdmin)return;
+
+ const msg=document.getElementById("adminMsg");
+ msg.innerText="Loading admin data...";
+
+ try{
+  const [ordersResult,customersResult,servicesResult]=await Promise.all([
+   db.from("orders").select("*").order("created_at",{ascending:false}),
+   db.from("profiles").select("*"),
+   db.from("services").select("*")
+  ]);
+
+  if(ordersResult.error)throw ordersResult.error;
+  if(customersResult.error)throw customersResult.error;
+  if(servicesResult.error)throw servicesResult.error;
+
+  const orders=ordersResult.data||[];
+  const customers=customersResult.data||[];
+  const services=servicesResult.data||[];
+
+  document.getElementById("totalOrders").innerText=orders.length;
+  document.getElementById("pendingOrders").innerText=
+   orders.filter(o=>o.status==="Pending").length;
+  document.getElementById("completedOrders").innerText=
+   orders.filter(o=>o.status==="Completed").length;
+  document.getElementById("totalCustomers").innerText=
+   customers.filter(c=>!c.is_admin).length;
+
+  showOrders(orders);
+  showCustomers(customers);
+  showAdminServices(services);
+
+  msg.innerText="Dashboard updated.";
+
+ }catch(e){
+  msg.innerText="Admin Error: "+e.message;
  }
 }
 
-async function checkSession(){
+function showOrders(orders){
+ const box=document.getElementById("adminOrders");
+ box.innerHTML="";
+
+ if(!orders.length){
+  box.innerText="No orders found.";
+  return;
+ }
+
+ const table=document.createElement("table");
+ table.innerHTML="<tr><th>ID</th><th>Customer</th><th>Service ID</th><th>Qty</th><th>Status</th><th>Update</th></tr>";
+
+ orders.forEach(o=>{
+  const tr=document.createElement("tr");
+
+  const cells=[o.id,o.customer_name,o.service_id,o.quantity,o.status];
+  cells.forEach(value=>{
+   const td=document.createElement("td");
+   td.textContent=value??"";
+   tr.appendChild(td);
+  });
+
+  const td=document.createElement("td");
+  const select=document.createElement("select");
+
+  ["Pending","Processing","Completed","Cancelled"].forEach(status=>{
+   const option=document.createElement("option");
+   option.value=status;
+   option.textContent=status;
+   if(status===o.status)option.selected=true;
+   select.appendChild(option);
+  });
+
+  const btn=document.createElement("button");
+  btn.textContent="Save";
+  btn.onclick=()=>updateOrder(o.id,select.value);
+
+  td.append(select,btn);
+  tr.appendChild(td);
+  table.appendChild(tr);
+ });
+
+ box.appendChild(table);
+}
+
+async function updateOrder(id,status){
+ const msg=document.getElementById("adminMsg");
 
  try{
-  const {data,error}=await db.auth.getSession();
-  if(error) throw error;
+  const {error}=await db.from("orders")
+   .update({status:status}).eq("id",id);
 
-  if(data.session){
-   await showApp(data.session.user);
-  }
- }catch(error){
-  document.getElementById("msg").innerText=error.message;
+  if(error)throw error;
+
+  msg.innerText="Order status updated!";
+  await loadAdminData();
+ }catch(e){msg.innerText="Update Error: "+e.message;}
+}
+
+function showCustomers(customers){
+ const box=document.getElementById("customers");
+ box.innerHTML="";
+
+ if(!customers.length){
+  box.innerText="No customers found.";
+  return;
  }
+
+ const table=document.createElement("table");
+ table.innerHTML="<tr><th>User ID</th><th>Wallet</th><th>Account</th></tr>";
+
+ customers.forEach(c=>{
+  const tr=document.createElement("tr");
+
+  [c.id,c.wallet_balance,c.is_admin?"Admin":"Customer"].forEach(value=>{
+   const td=document.createElement("td");
+   td.textContent=value??"";
+   tr.appendChild(td);
+  });
+
+  table.appendChild(tr);
+ });
+
+ box.appendChild(table);
+}
+
+function showAdminServices(services){
+ const box=document.getElementById("adminServices");
+ box.innerHTML="";
+
+ services.forEach(s=>{
+  const item=document.createElement("div");
+  item.className="item";
+
+  const name=document.createElement("p");
+  name.textContent=s.name;
+
+  const price=document.createElement("input");
+  price.type="number";
+  price.min="0";
+  price.value=s.price;
+
+  const active=document.createElement("input");
+  active.type="checkbox";
+  active.checked=s.is_active;
+  active.style.width="auto";
+
+  const label=document.createElement("label");
+  label.append(active,document.createTextNode(" Active"));
+
+  const btn=document.createElement("button");
+  btn.textContent="Save Service";
+  btn.onclick=()=>updateService(s.id,price.value,active.checked);
+
+  item.append(name,price,label,btn);
+  box.appendChild(item);
+ });
+}
+
+async function updateService(id,price,active){
+ const msg=document.getElementById("adminMsg");
+ const amount=Number(price);
+
+ if(!Number.isFinite(amount)||amount<0){
+  msg.innerText="Valid price dalo.";
+  return;
+ }
+
+ try{
+  const {error}=await db.from("services")
+   .update({price:amount,is_active:active}).eq("id",id);
+
+  if(error)throw error;
+
+  msg.innerText="Service updated!";
+  await loadAdminData();
+ }catch(e){msg.innerText="Service Error: "+e.message;}
+}
+
+async function checkSession(){
+ const {data,error}=await db.auth.getSession();
+ if(error){
+  document.getElementById("msg").innerText=error.message;
+  return;
+ }
+ if(data.session)await openPanel(data.session.user);
 }
 
 checkSession();
 </script>
-
 </body>
 </html>
