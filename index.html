@@ -14,10 +14,9 @@ h1{text-align:center;color:#38bdf8}
 input,select,button{width:100%;padding:12px;margin:7px 0;border:0;border-radius:7px}
 input,select{background:#26334d;color:white}
 button{background:#0ea5e9;color:white;font-weight:bold;cursor:pointer}
-button:hover{background:#0284c7}
-.small{font-size:13px;color:#cbd5e1}
 .item{background:#26334d;padding:12px;border-radius:8px;margin:8px 0}
 .hidden{display:none}
+.small{font-size:13px;color:#cbd5e1}
 </style>
 </head>
 <body>
@@ -48,7 +47,7 @@ button:hover{background:#0284c7}
 <h3>Place Order</h3>
 <select id="service"></select>
 <input id="quantity" type="number" placeholder="Quantity">
-<input id="target" type="url" placeholder="Instagram / Social Media Link">
+<input id="target" type="url" placeholder="Social Media Link">
 <p id="priceText">Price: ₹0</p>
 <button onclick="placeOrder()">Place Order</button>
 <p id="orderMsg" class="small"></p>
@@ -76,7 +75,7 @@ button:hover{background:#0284c7}
 
 <script>
 const SUPABASE_URL = "https://matxhmjpncwwcpzmcjgr.supabase.co";
-const SUPABASE_KEY = "sb_publishable_vkWlnEro7wE_e8n-Xlt_Q_dRwlkLzg";
+const SUPABASE_KEY = "sb_publishable_vkWlnEroI7wE_e8n-Xlt_Q_dRwlkLzg";
 const ADMIN_EMAIL = "hamidislamlove67@gmail.com";
 
 const db = supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
